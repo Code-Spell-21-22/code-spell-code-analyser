@@ -19,8 +19,6 @@ public class Main {
     private static PrintWriter errorWriter;
     private static PrintWriter outputWriter;
 
-    private static int exitCode = 0;
-
     public static void main(String[] args) throws IOException {
 
         File errorFile = new File(File.separator + "errors.txt");
@@ -32,29 +30,22 @@ public class Main {
         CodeExecution currentCodeExecution = getCurrentCodeExecution();
 
         if (currentCodeExecution == null) {
-
             writeAnalysisResults(new CodeAnalysisResult.Builder().withAnalysisStatus(AnalysisStatus.PRE_CHECK_ERROR).build());
-
-            System.exit(1);
-            errorWriter.close();
-            outputWriter.close();
-
+            exit(1);
             return;
-
         }
 
         try {
-            writeAnalysisResults(remoteCodeAnalyser());
+            CodeAnalysisResult codeAnalysisResult = remoteCodeAnalyser();
+            writeAnalysisResults(codeAnalysisResult);
+            exit(codeAnalysisResult.getAnalysisStatus() == AnalysisStatus.SUCCESS ? 0 : 1);
         } catch (Exception e) {
             System.out.println("Exception thrown while compiling remote code: " + e.getMessage());
             writeAnalysisResults(new CodeAnalysisResult.Builder().withAnalysisStatus(AnalysisStatus.COMPILATION_ERROR).build());
-            exitCode = 1;
+            exit(1);
         }
 
-        System.exit(exitCode);
-
-        errorWriter.close();
-        outputWriter.close();
+        exit(2);
 
     }
 
@@ -68,7 +59,6 @@ public class Main {
         CodeExecution currentCodeExecution = getCurrentCodeExecution();
 
         if (currentCodeExecution == null) {
-            exitCode = 1;
             return new CodeAnalysisResult.Builder().withAnalysisStatus(AnalysisStatus.PRE_CHECK_ERROR).build();
         }
 
@@ -86,7 +76,6 @@ public class Main {
 
         if (ds.getDiagnostics().isEmpty()) {
             outputWriter.println("No errors found!");
-            exitCode = 0;
             return new CodeAnalysisResult.Builder().withAnalysisStatus(AnalysisStatus.SUCCESS).build();
         }
 
@@ -95,7 +84,6 @@ public class Main {
             errorWriter.printf("Caused by: %s\n",  d.getMessage(null));
         }
 
-        exitCode = 1;
         return new CodeAnalysisResult.Builder().withAnalysisStatus(AnalysisStatus.COMPILATION_ERROR).build();
 
     }
@@ -123,6 +111,12 @@ public class Main {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.writeValue(analysisFile, codeAnalysisResult);
 
+    }
+
+    private static void exit(int exitCode) {
+        errorWriter.close();
+        outputWriter.close();
+        System.exit(exitCode);
     }
 
 }
