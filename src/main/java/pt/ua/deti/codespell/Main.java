@@ -19,6 +19,8 @@ public class Main {
     private static PrintWriter errorWriter;
     private static PrintWriter outputWriter;
 
+    private static CodeExecution currentCodeExecution;
+
     public static void main(String[] args) throws IOException {
 
         File errorFile = new File(File.separator + "errors.txt");
@@ -27,10 +29,10 @@ public class Main {
         errorWriter = new PrintWriter(errorFile, StandardCharsets.UTF_8);
         outputWriter = new PrintWriter(outputFile, StandardCharsets.UTF_8);
 
-        CodeExecution currentCodeExecution = getCurrentCodeExecution();
+        currentCodeExecution = getCurrentCodeExecution();
 
         if (currentCodeExecution == null) {
-            writeAnalysisResults(new CodeAnalysisResult.Builder().withAnalysisStatus(AnalysisStatus.PRE_CHECK_ERROR).build());
+            writeAnalysisResults(new CodeAnalysisResult.Builder(null).withAnalysisStatus(AnalysisStatus.PRE_CHECK_ERROR).build());
             exit(1);
             return;
         }
@@ -41,7 +43,7 @@ public class Main {
             exit(codeAnalysisResult.getAnalysisStatus() == AnalysisStatus.SUCCESS ? 0 : 1);
         } catch (Exception e) {
             System.out.println("Exception thrown while compiling remote code: " + e.getMessage());
-            writeAnalysisResults(new CodeAnalysisResult.Builder().withAnalysisStatus(AnalysisStatus.COMPILATION_ERROR).build());
+            writeAnalysisResults(new CodeAnalysisResult.Builder(currentCodeExecution.getCodeUniqueId()).withAnalysisStatus(AnalysisStatus.COMPILATION_ERROR).build());
             exit(1);
         }
 
@@ -56,10 +58,8 @@ public class Main {
      */
     private static CodeAnalysisResult remoteCodeAnalyser() {
 
-        CodeExecution currentCodeExecution = getCurrentCodeExecution();
-
         if (currentCodeExecution == null) {
-            return new CodeAnalysisResult.Builder().withAnalysisStatus(AnalysisStatus.PRE_CHECK_ERROR).build();
+            return new CodeAnalysisResult.Builder(null).withAnalysisStatus(AnalysisStatus.PRE_CHECK_ERROR).build();
         }
 
         Level currentCodeExecutionLevel = currentCodeExecution.getLevel();
@@ -76,7 +76,7 @@ public class Main {
 
         if (ds.getDiagnostics().isEmpty()) {
             outputWriter.println("No errors found!");
-            return new CodeAnalysisResult.Builder().withAnalysisStatus(AnalysisStatus.SUCCESS).build();
+            return new CodeAnalysisResult.Builder(currentCodeExecution.getCodeUniqueId()).withAnalysisStatus(AnalysisStatus.SUCCESS).build();
         }
 
         for (Diagnostic < ? extends JavaFileObject > d : ds.getDiagnostics()) {
@@ -84,7 +84,7 @@ public class Main {
             errorWriter.printf("Caused by: %s\n",  d.getMessage(null));
         }
 
-        return new CodeAnalysisResult.Builder().withAnalysisStatus(AnalysisStatus.COMPILATION_ERROR).build();
+        return new CodeAnalysisResult.Builder(currentCodeExecution.getCodeUniqueId()).withAnalysisStatus(AnalysisStatus.COMPILATION_ERROR).build();
 
     }
 
