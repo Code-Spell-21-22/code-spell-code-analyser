@@ -12,13 +12,12 @@ public class CodeAnalysisResult {
     private final long time;
 
     public static class Builder {
-        private UUID codeUniqueId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+        private final UUID codeUniqueId;
         private AnalysisStatus analysisStatus = AnalysisStatus.NONE;
         private long time = 0;
 
-        public Builder withCodeUniqueId(UUID codeUniqueId) {
+        public Builder(UUID codeUniqueId) {
             this.codeUniqueId = codeUniqueId;
-            return this;
         }
 
         public Builder withAnalysisStatus(AnalysisStatus analysisStatus) {
