@@ -1,5 +1,8 @@
 package pt.ua.deti.codespell.utils;
 
+import lombok.EqualsAndHashCode;
+
+@EqualsAndHashCode
 public class Level {
 
     private final int chapterNumber;

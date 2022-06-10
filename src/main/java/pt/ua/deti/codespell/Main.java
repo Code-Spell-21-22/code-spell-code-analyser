@@ -1,10 +1,7 @@
 package pt.ua.deti.codespell;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import pt.ua.deti.codespell.utils.AnalysisStatus;
-import pt.ua.deti.codespell.utils.CodeAnalysisResult;
-import pt.ua.deti.codespell.utils.CodeExecution;
-import pt.ua.deti.codespell.utils.Level;
+import pt.ua.deti.codespell.utils.*;
 
 import javax.tools.*;
 import java.io.File;
@@ -12,22 +9,17 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.Locale;
 import java.util.UUID;
 
 public class Main {
 
-    private static PrintWriter errorWriter;
-    private static PrintWriter outputWriter;
+    private static final File errorFile = new File(File.separator + "errors.txt");
+    private static final File outputFile = new File(File.separator + "output.txt");
 
     private static CodeExecution currentCodeExecution;
 
     public static void main(String[] args) throws IOException {
-
-        File errorFile = new File(File.separator + "errors.txt");
-        File outputFile = new File(File.separator + "output.txt");
-
-        errorWriter = new PrintWriter(errorFile, StandardCharsets.UTF_8);
-        outputWriter = new PrintWriter(outputFile, StandardCharsets.UTF_8);
 
         currentCodeExecution = getCurrentCodeExecution();
 
@@ -56,13 +48,14 @@ public class Main {
      *
      * This method will have the responsibility of analysing the remote code + support classes.
      */
-    private static CodeAnalysisResult remoteCodeAnalyser() {
+    private static CodeAnalysisResult remoteCodeAnalyser() throws IOException {
 
         if (currentCodeExecution == null) {
             return new CodeAnalysisResult.Builder(null).withAnalysisStatus(AnalysisStatus.PRE_CHECK_ERROR).build();
         }
 
         Level currentCodeExecutionLevel = currentCodeExecution.getLevel();
+        int linesOffset = LinesOffsetRegister.getOffsetByLevel(currentCodeExecutionLevel);
 
         File fileToCompile = new File(String.format("/code-spell-code-executor/src/main/java/pt/ua/deti/codespell/chapters/chapter_%d/Level_%d.java", currentCodeExecutionLevel.getChapterNumber(), currentCodeExecutionLevel.getLevelNumber()));
 
@@ -74,14 +67,21 @@ public class Main {
         JavaCompiler.CompilationTask task = compiler.getTask( null, mgr, ds, null, null, sources );
         task.call();
 
-        if (ds.getDiagnostics().isEmpty()) {
-            outputWriter.println("No errors found!");
-            return new CodeAnalysisResult.Builder(currentCodeExecution.getCodeUniqueId()).withAnalysisStatus(AnalysisStatus.SUCCESS).build();
-        }
+        try (PrintWriter outputWriter = new PrintWriter(outputFile, StandardCharsets.UTF_8)) {
+            try ( PrintWriter errorWriter = new PrintWriter(errorFile, StandardCharsets.UTF_8) ) {
 
-        for (Diagnostic < ? extends JavaFileObject > d : ds.getDiagnostics()) {
-            errorWriter.printf("Error on Line %d in %s\n", d.getLineNumber(), d.getSource().getName());
-            errorWriter.printf("Caused by: %s\n",  d.getMessage(null));
+                if (ds.getDiagnostics().isEmpty()) {
+                    outputWriter.println("No errors found!");
+                    return new CodeAnalysisResult.Builder(currentCodeExecution.getCodeUniqueId()).withAnalysisStatus(AnalysisStatus.SUCCESS).build();
+                }
+
+                for (Diagnostic < ? extends JavaFileObject > d : ds.getDiagnostics()) {
+                    errorWriter.printf("Error on Line %d.\n", d.getLineNumber()-linesOffset);
+                    errorWriter.printf("Caused by: \n%s\n",  d.getMessage(Locale.ENGLISH));
+                    errorWriter.printf("On code: \n%s\n",  d.getCode());
+                }
+
+            }
         }
 
         return new CodeAnalysisResult.Builder(currentCodeExecution.getCodeUniqueId()).withAnalysisStatus(AnalysisStatus.COMPILATION_ERROR).build();
@@ -114,8 +114,6 @@ public class Main {
     }
 
     private static void exit(int exitCode) {
-        errorWriter.close();
-        outputWriter.close();
         System.exit(exitCode);
     }
 
