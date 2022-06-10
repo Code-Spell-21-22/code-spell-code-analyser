@@ -76,9 +76,8 @@ public class Main {
                 }
 
                 for (Diagnostic < ? extends JavaFileObject > d : ds.getDiagnostics()) {
-                    errorWriter.printf("Error on Line %d.\n", d.getLineNumber()-linesOffset);
+                    errorWriter.printf("Error on Line %d on column %s.\n", d.getLineNumber()-linesOffset, d.getColumnNumber());
                     errorWriter.printf("Caused by: \n%s\n",  d.getMessage(Locale.ENGLISH));
-                    errorWriter.printf("On code: \n%s\n",  d.getCode());
                 }
 
             }
