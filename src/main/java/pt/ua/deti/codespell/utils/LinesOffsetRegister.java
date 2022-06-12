@@ -7,7 +7,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum LinesOffsetRegister {
 
-    LEVEL_1_1(new Level(1,1), 49);
+    LEVEL_1_1(new Level(1,1), 49),
+    LEVEL_2_3(new Level(2,3), 49);
 
     private final Level level;
     private final int linesOffset;
